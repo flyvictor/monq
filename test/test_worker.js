@@ -77,7 +77,16 @@ describe('Worker', function () {
             beforeEach(function () {
                 work = sinon.stub(worker, 'work');
 
-                sinon.stub(worker.queues[0], 'dequeue').yields(null, job);
+                worker.queues = [worker.queues[0]]; //We don't need three queues here
+
+                sinon.stub(worker.queues[0], 'dequeue')
+                  .onFirstCall().yields(null, job)
+                  .onSecondCall().yields(null, {data: "second run"})
+                  .onThirdCall().yields(null, null);
+            });
+
+            afterEach(function(){
+              worker.work.restore();
             });
 
             it('works on the job', function () {
@@ -94,6 +103,26 @@ describe('Worker', function () {
                 });
 
                 worker.start();
+            });
+            it('does not wait for job to complete when explicitly told to', function(done){
+              worker.parallel = true;
+              worker.start();
+
+              worker.on('empty', function(){
+                assert.ok(work.calledTwice);
+                done();
+              });
+            });
+
+            it('does not break the order of jobs running in parallel mode', function(done){
+              worker.parallel = true;
+              worker.start();
+
+              worker.on('empty', function(){
+                assert.equal(work.getCall(0).args[0], job);
+                assert.deepEqual(work.getCall(1).args[0], {data: "second run"});
+                done();
+              });
             });
         });
 
