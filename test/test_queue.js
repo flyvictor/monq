@@ -6,11 +6,12 @@ describe('Queue', function () {
     var queue;
 
     beforeEach(function () {
-        queue = new Queue({ db: helpers.db });
+        queue = new Queue({ _ready: helpers.db });
     });
 
-    afterEach(function (done) {
-        queue.collection.remove({}, done);
+    afterEach(function () {
+        return queue.collection
+          .then(c => c.remove({}));
     });
 
     describe('enqueue', function () {

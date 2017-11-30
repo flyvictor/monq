@@ -1,9 +1,9 @@
 var async = require('async');
-var mongo = require('mongoskin');
+const MongoClient = require('mongodb').MongoClient;
 
 exports.uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/monq_tests';
 
-exports.db = mongo.db(exports.uri, { safe: true });
+exports.db = MongoClient.connect(exports.uri);
 
 exports.each = function (fixture, fn, done) {
     async.each(fixture, function (args, callback) {
