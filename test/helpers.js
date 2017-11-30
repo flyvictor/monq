@@ -1,5 +1,5 @@
 var async = require('async');
-const MongoClient = require('mongodb').MongoClient;
+var MongoClient = require('mongodb').MongoClient;
 
 exports.uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/monq_tests';
 

@@ -23,7 +23,7 @@ describe('Timeout', function () {
 
     afterEach(function () {
         return queue.collection
-          .then(c => c.remove({}));
+          .then(function(c) {return c.remove({})});
     });
 
     describe('worker processing job with a timeout', function () {

@@ -24,7 +24,7 @@ describe('Retries', function () {
 
     afterEach(function () {
         return queue.collection
-          .then(c => c.remove({}));
+          .then(function(c) {return c.remove({})});
     });
 
     describe('worker retrying job', function () {

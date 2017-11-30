@@ -7,8 +7,8 @@ describe('Job', function () {
 
     beforeEach(function () {
        return collectionWrapper = helpers.db
-         .then(db => db.collection('jobs'))
-         .then(coll => collection = coll);
+         .then(function(db){ return db.collection('jobs')})
+         .then(function(coll){ return collection = coll});
     });
 
     afterEach(function () {
