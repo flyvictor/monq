@@ -8,7 +8,7 @@ describe('Timeout', function () {
     var queue, handler, worker, failed;
 
     beforeEach(function () {
-        queue = new Queue({ db: helpers.db });
+        queue = new Queue({ _ready: helpers.db });
 
         handler = sinon.spy(function (params, callback) {
             // Don't call the callback, let it timeout
@@ -21,8 +21,9 @@ describe('Timeout', function () {
         worker.on('failed', failed);
     });
 
-    afterEach(function (done) {
-        queue.collection.remove({}, done);
+    afterEach(function () {
+        return queue.collection
+          .then(function(c) {return c.remove({})});
     });
 
     describe('worker processing job with a timeout', function () {

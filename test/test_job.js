@@ -3,18 +3,20 @@ var helpers = require('./helpers');
 var Job = require('../lib/job');
 
 describe('Job', function () {
-    var collection;
+    var collection, collectionWrapper;
 
     beforeEach(function () {
-        collection = helpers.db.collection('jobs');
+       return collectionWrapper = helpers.db
+         .then(function(db){ return db.collection('jobs')})
+         .then(function(coll){ return collection = coll});
     });
 
-    afterEach(function (done) {
-        collection.remove({}, done);
+    afterEach(function () {
+        return collection.remove({});
     });
 
     it('has data object', function () {
-        var job = new Job(collection, { foo: 'bar' });
+        var job = new Job(collectionWrapper, { foo: 'bar' });
         assert.deepEqual(job.data, { foo: 'bar' });
     });
 
@@ -22,7 +24,7 @@ describe('Job', function () {
         var job;
 
         beforeEach(function (done) {
-            job = new Job(collection, { foo: 'bar' });
+            job = new Job(collectionWrapper, { foo: 'bar' });
             job.save(done);
         });
 
@@ -32,7 +34,7 @@ describe('Job', function () {
         });
 
         it('is inserted into collection', function (done) {
-            collection.findById(job.data._id, function (err, doc) {
+            collection.findOne({_id: job.data._id}, function (err, doc) {
                 if (err) return done(err);
 
                 assert.ok(doc);
@@ -43,7 +45,7 @@ describe('Job', function () {
         });
 
         it('contains a string id', function (done) {
-            collection.findById(job.data._id, function (err, doc) {
+            collection.findOne({_id: job.data._id}, function (err, doc) {
                 if (err) return done(err);
 
                 assert.equal(doc._id.toString(), job.data.id);
@@ -56,7 +58,7 @@ describe('Job', function () {
         var job;
 
         beforeEach(function (done) {
-            job = new Job(collection, { foo: 'bar' });
+            job = new Job(collectionWrapper, { foo: 'bar' });
             job.save(function (err) {
                 if (err) return done(err);
 
@@ -76,7 +78,7 @@ describe('Job', function () {
         var job;
 
         beforeEach(function (done) {
-            job = new Job(collection, { foo: 'bar' });
+            job = new Job(collectionWrapper, { foo: 'bar' });
             job.complete({ bar: 'baz' }, done);
         });
 
@@ -97,7 +99,7 @@ describe('Job', function () {
         var job;
 
         beforeEach(function (done) {
-            job = new Job(collection, { foo: 'bar' });
+            job = new Job(collectionWrapper, { foo: 'bar' });
             job.fail(new Error('baz'), done);
         });
 
@@ -124,7 +126,7 @@ describe('Job', function () {
         var job, save;
 
         beforeEach(function (done) {
-            job = new Job(collection, { foo: 'bar', status: 'queued' });
+            job = new Job(collectionWrapper, { foo: 'bar', status: 'queued' });
             job.cancel(done);
         });
 

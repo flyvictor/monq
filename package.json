@@ -5,23 +5,19 @@
     "homepage": "http://github.com/scttnlsn/monq",
     "author": "Scott Nelson <scott@scttnlsn.com>",
     "main": "./lib/index",
-
     "scripts": {
         "test": "./node_modules/.bin/mocha"
     },
-
     "repository": {
         "type": "git",
         "url": "git://github.com/scttnlsn/monq.git"
     },
-
     "dependencies": {
-        "mongoskin": "1.4.4"
+        "mongodb": "2.2.33"
     },
-
     "devDependencies": {
         "async": "0.2.10",
-        "mocha": "1.18.2",
+        "mocha": "3.5.3",
         "sinon": "1.9.0"
     }
 }

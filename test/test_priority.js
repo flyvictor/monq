@@ -10,15 +10,17 @@ describe('Priority', function () {
     var handler, queue, worker;
 
     beforeEach(function () {
-        queue = new Queue({ db: helpers.db });
+        queue = new Queue({ _ready: Promise.resolve(helpers.db) });
 
         handler = sinon.spy(function (params, callback) {
             callback();
         });
     });
 
-    afterEach(function (done) {
-        queue.collection.remove({}, done);
+    afterEach(function () {
+        return queue.collection.then(function(collection) {
+            return collection.remove({})
+        });
     });
 
     describe('worker with no minimum priority', function () {

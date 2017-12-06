@@ -9,7 +9,7 @@ describe('Retries', function () {
     var queue, handler, worker, failed;
 
     beforeEach(function () {
-        queue = new Queue({ db: helpers.db });
+        queue = new Queue({ _ready: helpers.db });
 
         handler = sinon.spy(function (params, callback) {
             return callback(new Error());
@@ -22,8 +22,9 @@ describe('Retries', function () {
         worker.on('failed', failed);
     });
 
-    afterEach(function (done) {
-        queue.collection.remove({}, done);
+    afterEach(function () {
+        return queue.collection
+          .then(function(c) {return c.remove({})});
     });
 
     describe('worker retrying job', function () {
