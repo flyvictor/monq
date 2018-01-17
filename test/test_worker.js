@@ -59,11 +59,26 @@ describe('Worker', function () {
         describe('when error', function () {
             it('emits an `error` event', function (done) {
                 var error = new Error();
-                
+
                 sinon.stub(worker, 'dequeue').yields(error);
 
                 worker.on('error', function (err) {
                     assert.equal(err, error);
+                    done();
+                });
+
+                worker.start();
+            });
+            it('handles `collection going away` error', function (done) {
+                var error = new Error('Operation aborted: collection going away');
+                var error2 = new Error('different error');
+
+                sinon.stub(worker, 'dequeue')
+                    .onFirstCall().yields(error)
+                    .onSecondCall().yields(error2);
+
+                worker.on('error', function (err) {
+                    assert.equal(err.message, 'different error');
                     done();
                 });
 
@@ -270,7 +285,7 @@ describe('Worker', function () {
 
             beforeEach(function () {
                 error = new Error();
-                
+
                 fail = sinon.stub(job, 'fail').yields();
                 poll = sinon.spy(worker, 'poll');
 
