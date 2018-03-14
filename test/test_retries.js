@@ -17,8 +17,15 @@ describe('Retries', function () {
 
         failed = sinon.spy();
 
-        worker = new Worker([queue], { interval: 10 });
-        worker.register({ retry: handler });
+        worker = new Worker([queue], {
+            interval: 10,
+            strategies: {
+                predicate: function(attempts, error, jobdata) {
+                    return jobdata.params.retry === true ? 0 : null;
+                }
+            }
+        });
+        worker.register({ retry: handler, predicate: handler });
         worker.on('failed', failed);
     });
 
@@ -50,6 +57,33 @@ describe('Retries', function () {
             assert.equal(job.attempts.remaining, 0);
             assert.equal(job.attempts.count, 3);
             assert.equal(job.status, 'failed');
+        });
+    });
+
+    describe('retry predicate', function(){
+
+        it('should retry the job if predicate matched', function(done){
+           queue.enqueue('predicate', {retry: true }, {attempts: {count: 2, strategy: 'predicate'}}, function(){
+               helpers.flushWorker(worker, function(){
+                   var job = failed.lastCall.args[0];
+                   assert.equal(handler.callCount, 2);
+                   assert.equal(job.attempts.remaining, 0);
+                   assert.equal(job.attempts.count, 2);
+                   done();
+               });
+           });
+        });
+        it('should not retry the job if predicate returns false', function(done){
+            queue.enqueue('predicate', {retry: false }, {attempts: {count: 2, delay: 0, strategy: 'predicate'}}, function(){
+                helpers.flushWorker(worker, function(){
+                    var job = failed.lastCall.args[0];
+                    assert.equal(handler.callCount, 1);
+                    assert.equal(job.attempts.remaining, 1);
+                    assert.equal(job.attempts.count, 2);
+                    assert.equal(job.status, 'failed');
+                    done();
+                });
+            });
         });
     });
 
