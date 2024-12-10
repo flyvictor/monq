@@ -21,9 +21,10 @@ describe('Timeout', function () {
         worker.on('failed', failed);
     });
 
-    afterEach(function () {
-        return queue.collection
-          .then(function(c) {return c.remove({})});
+
+    afterEach(async function () {
+        const collection = await queue.collection;
+        await collection.deleteMany({});
     });
 
     describe('worker processing job with a timeout', function () {
@@ -31,8 +32,8 @@ describe('Timeout', function () {
             queue.enqueue('timeout', {}, { timeout: 10 }, done);
         });
 
-        beforeEach(function (done) {
-            helpers.flushWorker(worker, done);
+        beforeEach(function () {
+            return helpers.flushWorker(worker);
         });
 
         it('calls the handler once', function () {
@@ -56,8 +57,8 @@ describe('Timeout', function () {
             queue.enqueue('timeout', {}, { timeout: 10, attempts: { count: 3 }}, done);
         });
 
-        beforeEach(function (done) {
-            helpers.flushWorker(worker, done);
+        beforeEach(function () {
+            return helpers.flushWorker(worker);
         });
 
         it('calls the handler three times', function () {

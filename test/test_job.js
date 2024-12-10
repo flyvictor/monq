@@ -1,154 +1,160 @@
-var assert = require('assert');
-var helpers = require('./helpers');
-var Job = require('../lib/job');
+var assert = require("assert");
+var helpers = require("./helpers");
+var Job = require("../lib/job");
 
-describe('Job', function () {
-    var collection, collectionWrapper;
+describe("Job", function () {
+  var collection, collectionWrapper;
 
-    beforeEach(function () {
-       return collectionWrapper = helpers.db
-         .then(function(db){ return db.collection('jobs')})
-         .then(function(coll){ return collection = coll});
+  beforeEach(function () {
+    return (collectionWrapper = helpers.db
+      .then(function (db) {
+        return db.collection("jobs");
+      })
+      .then(function (coll) {
+        return (collection = coll);
+      }));
+  });
+
+  afterEach(function () {
+    return collection.deleteMany({});
+  });
+
+  it("has data object", function () {
+    var job = new Job(collectionWrapper, { foo: "bar" });
+    assert.deepEqual(job.data, { foo: "bar" });
+  });
+
+  describe("when saving", function () {
+    var job;
+
+    beforeEach(function (done) {
+      job = new Job(collectionWrapper, { foo: "bar" });
+      job.save(done);
     });
 
-    afterEach(function () {
-        return collection.remove({});
+    it("has an `_id`", function () {
+      assert.ok(job.data._id);
+      assert.equal(job.data.foo, "bar");
     });
 
-    it('has data object', function () {
-        var job = new Job(collectionWrapper, { foo: 'bar' });
-        assert.deepEqual(job.data, { foo: 'bar' });
+    it("is inserted into collection", function (done) {
+      collection
+        .findOne({ _id: job.data._id })
+        .then(function (doc) {
+          assert.ok(doc);
+          assert.equal(doc._id.toString(), job.data._id.toString());
+          assert.equal(doc.foo, job.data.foo);
+          done();
+        })
+        .catch(done);
     });
 
-    describe('when saving', function () {
-        var job;
+    it("contains a string id", function (done) {
+      collection
+        .findOne({ _id: job.data._id })
+        .then((doc) => {
+          assert.equal(doc._id.toString(), job.data.id);
+          done();
+        })
+        .catch(done);
+    });
+  });
 
-        beforeEach(function (done) {
-            job = new Job(collectionWrapper, { foo: 'bar' });
-            job.save(done);
-        });
+  describe("when updating", function () {
+    var job;
 
-        it('has an `_id`', function () {
-            assert.ok(job.data._id);
-            assert.equal(job.data.foo, 'bar');
-        });
+    beforeEach(function (done) {
+      job = new Job(collectionWrapper, { foo: "bar" });
+      job.save(function (err) {
+        if (err) return done(err);
 
-        it('is inserted into collection', function (done) {
-            collection.findOne({_id: job.data._id}, function (err, doc) {
-                if (err) return done(err);
+        assert.equal(job.data.foo, "bar");
 
-                assert.ok(doc);
-                assert.equal(doc._id.toString(), job.data._id.toString());
-                assert.equal(doc.foo, job.data.foo);
-                done();
-            });
-        });
-
-        it('contains a string id', function (done) {
-            collection.findOne({_id: job.data._id}, function (err, doc) {
-                if (err) return done(err);
-
-                assert.equal(doc._id.toString(), job.data.id);
-                done();
-            });
-        });
+        job.data.foo = "baz";
+        job.save(done);
+      });
     });
 
-    describe('when updating', function () {
-        var job;
+    it("has udpated data", function () {
+      assert.equal(job.data.foo, "baz");
+    });
+  });
 
-        beforeEach(function (done) {
-            job = new Job(collectionWrapper, { foo: 'bar' });
-            job.save(function (err) {
-                if (err) return done(err);
+  describe("when completing", function () {
+    var job;
 
-                assert.equal(job.data.foo, 'bar');
-                
-                job.data.foo = 'baz';
-                job.save(done);
-            });
-        });
-
-        it('has udpated data', function () {
-            assert.equal(job.data.foo, 'baz');
-        });
+    beforeEach(function (done) {
+      job = new Job(collectionWrapper, { foo: "bar" });
+      job.complete({ bar: "baz" }, done);
     });
 
-    describe('when completing', function () {
-        var job;
-
-        beforeEach(function (done) {
-            job = new Job(collectionWrapper, { foo: 'bar' });
-            job.complete({ bar: 'baz' }, done);
-        });
-
-        it('has a complete status', function () {
-            assert.equal(job.data.status, 'complete');
-        });
-
-        it('has an end time', function () {
-            assert.ok(job.data.ended <= new Date());
-        });
-
-        it('has a result', function () {
-            assert.deepEqual(job.data.result, { bar: 'baz' });
-        });
+    it("has a complete status", function () {
+      assert.equal(job.data.status, "complete");
     });
 
-    describe('when failing', function () {
-        var job;
-
-        beforeEach(function (done) {
-            job = new Job(collectionWrapper, { foo: 'bar' });
-            job.fail(new Error('baz'), done);
-        });
-
-        it('has a failed status', function () {
-            assert.equal(job.data.status, 'failed');
-        });
-
-        it('has an end time', function () {
-            assert.ok(job.data.ended);
-            assert.ok(job.data.ended <= new Date());
-        });
-
-        it('has an error', function () {
-            assert.ok(job.data.error);
-            assert.equal(job.data.error, 'baz');
-        });
-
-        it('has a stack', function () {
-            assert.ok(job.data.stack);
-        });
+    it("has an end time", function () {
+      assert.ok(job.data.ended <= new Date());
     });
 
-    describe('when cancelling a queued job', function () {
-        var job, save;
+    it("has a result", function () {
+      assert.deepEqual(job.data.result, { bar: "baz" });
+    });
+  });
 
-        beforeEach(function (done) {
-            job = new Job(collectionWrapper, { foo: 'bar', status: 'queued' });
-            job.cancel(done);
-        });
+  describe("when failing", function () {
+    var job;
 
-        it('is cancelled', function () {
-            assert.equal(job.data.status, 'cancelled');
-        });
+    beforeEach(function (done) {
+      job = new Job(collectionWrapper, { foo: "bar" });
+      job.fail(new Error("baz"), done);
     });
 
-    describe('when cancelling a complete job', function () {
-        var job, error;
-
-        beforeEach(function (done) {
-            job = new Job(collection, { foo: 'bar', status: 'complete' });
-            job.cancel(function (err) {
-                error = err;
-                done();
-            });
-        });
-
-        it('is returns error', function () {
-            assert.equal(job.data.status, 'complete');
-            assert.equal(error.message, 'Only queued jobs may be cancelled');
-        });
+    it("has a failed status", function () {
+      assert.equal(job.data.status, "failed");
     });
+
+    it("has an end time", function () {
+      assert.ok(job.data.ended);
+      assert.ok(job.data.ended <= new Date());
+    });
+
+    it("has an error", function () {
+      assert.ok(job.data.error);
+      assert.equal(job.data.error, "baz");
+    });
+
+    it("has a stack", function () {
+      assert.ok(job.data.stack);
+    });
+  });
+
+  describe("when cancelling a queued job", function () {
+    var job, save;
+
+    beforeEach(function (done) {
+      job = new Job(collectionWrapper, { foo: "bar", status: "queued" });
+      job.cancel(done);
+    });
+
+    it("is cancelled", function () {
+      assert.equal(job.data.status, "cancelled");
+    });
+  });
+
+  describe("when cancelling a complete job", function () {
+    var job, error;
+
+    beforeEach(function (done) {
+      job = new Job(collection, { foo: "bar", status: "complete" });
+      job.cancel(function (err) {
+        error = err;
+        done();
+      });
+    });
+
+    it("is returns error", function () {
+      assert.equal(job.data.status, "complete");
+      assert.equal(error.message, "Only queued jobs may be cancelled");
+    });
+  });
 });

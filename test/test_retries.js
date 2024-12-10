@@ -29,9 +29,9 @@ describe('Retries', function () {
         worker.on('failed', failed);
     });
 
-    afterEach(function () {
-        return queue.collection
-          .then(function(c) {return c.remove({})});
+    afterEach(async function () {
+        const collection = await queue.collection;
+        await collection.deleteMany({});
     });
 
     describe('worker retrying job', function () {
@@ -39,8 +39,8 @@ describe('Retries', function () {
             queue.enqueue('retry', {}, { attempts: { count: 3 } }, done);
         });
 
-        beforeEach(function (done) {
-            helpers.flushWorker(worker, done);
+        beforeEach(function () {
+            return helpers.flushWorker(worker);
         });
 
         it('calls the handler once for each retry', function () {
@@ -63,26 +63,24 @@ describe('Retries', function () {
     describe('retry predicate', function(){
 
         it('should retry the job if predicate matched', function(done){
-           queue.enqueue('predicate', {retry: true }, {attempts: {count: 2, strategy: 'predicate'}}, function(){
-               helpers.flushWorker(worker, function(){
-                   var job = failed.lastCall.args[0];
-                   assert.equal(handler.callCount, 2);
-                   assert.equal(job.attempts.remaining, 0);
-                   assert.equal(job.attempts.count, 2);
-                   done();
-               });
+           queue.enqueue('predicate', {retry: true }, {attempts: {count: 2, strategy: 'predicate'}}, async function(){
+                await helpers.flushWorker(worker)
+                const job = failed.lastCall.args[0];
+                assert.equal(handler.callCount, 2);
+                assert.equal(job.attempts.remaining, 0);
+                assert.equal(job.attempts.count, 2);
+                done();
            });
         });
         it('should not retry the job if predicate returns false', function(done){
-            queue.enqueue('predicate', {retry: false }, {attempts: {count: 2, delay: 0, strategy: 'predicate'}}, function(){
-                helpers.flushWorker(worker, function(){
-                    var job = failed.lastCall.args[0];
-                    assert.equal(handler.callCount, 1);
-                    assert.equal(job.attempts.remaining, 1);
-                    assert.equal(job.attempts.count, 2);
-                    assert.equal(job.status, 'failed');
-                    done();
-                });
+            queue.enqueue('predicate', {retry: false }, {attempts: {count: 2, delay: 0, strategy: 'predicate'}}, async function(){
+                await helpers.flushWorker(worker)
+                const job = failed.lastCall.args[0];
+                assert.equal(handler.callCount, 1);
+                assert.equal(job.attempts.remaining, 1);
+                assert.equal(job.attempts.count, 2);
+                assert.equal(job.status, 'failed');
+                done();
             });
         });
     });
@@ -95,9 +93,9 @@ describe('Retries', function () {
         });
 
         describe('after first attempt', function () {
-            beforeEach(function (done) {
+            beforeEach(function () {
                 start = new Date();
-                helpers.flushWorker(worker, done);
+                return helpers.flushWorker(worker);
             });
 
             it('calls handler once', function () {
@@ -114,11 +112,9 @@ describe('Retries', function () {
                 assert.ok(new Date(data.delay).getTime() >= start.getTime() + 100);
             });
 
-            it('does not immediately dequeue job', function (done) {
-                helpers.flushWorker(worker, function () {
-                    assert.equal(handler.callCount, 1);
-                    done();
-                });
+            it('does not immediately dequeue job', async function () {
+                await helpers.flushWorker(worker);
+                assert.equal(handler.callCount, 1)
             });
         });
 
@@ -126,7 +122,7 @@ describe('Retries', function () {
             var delay;
 
             beforeEach(function () {
-                delay = sinon.stub(Job.prototype, 'delay', function (delay, callback) {
+                delay = sinon.stub(Job.prototype, 'delay').callsFake(function (delay, callback) {
                     assert.equal(delay, 100);
 
                     this.data.delay = new Date();
@@ -134,8 +130,8 @@ describe('Retries', function () {
                 });
             });
 
-            beforeEach(function (done) {
-                helpers.flushWorker(worker, done);
+            beforeEach(function () {
+                return helpers.flushWorker(worker);
             });
 
             afterEach(function () {
@@ -165,8 +161,8 @@ describe('Retries', function () {
             queue.enqueue('retry', {}, { attempts: { count: 0 }}, done);
         });
 
-        beforeEach(function (done) {
-            helpers.flushWorker(worker, done);
+        beforeEach(function () {
+            return helpers.flushWorker(worker);
         });
 
         it('calls the handler once', function () {
