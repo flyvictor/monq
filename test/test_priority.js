@@ -1,5 +1,4 @@
 var assert = require('assert');
-var async = require('async');
 var sinon = require('sinon');
 var helpers = require('./helpers');
 var Queue = require('../lib/queue');
@@ -12,27 +11,23 @@ describe('Priority', function () {
     beforeEach(function () {
         queue = new Queue({ _ready: Promise.resolve(helpers.db) });
 
-        handler = sinon.spy(function (params, callback) {
+        handler = sinon.stub().callsFake(function (params, callback) {
             callback();
         });
     });
 
-    afterEach(function () {
-        return queue.collection.then(function(collection) {
-            return collection.remove({})
-        });
+    afterEach(async function () {
+        const collection = await queue.collection;
+        await collection.deleteMany({});
     });
 
     describe('worker with no minimum priority', function () {
-        beforeEach(function (done) {
+        beforeEach(async function () {
             worker = new Worker([queue], { interval: 1 });
             worker.register({ priority: handler });
 
-            helpers.each(jobs, queue.enqueue.bind(queue), done);
-        });
-
-        beforeEach(function (done) {
-            helpers.flushWorker(worker, done);
+            await helpers.each(jobs, queue.enqueue.bind(queue));
+            await helpers.flushWorker(worker);
         });
 
         it('calls handler once for each job', function () {
@@ -49,15 +44,12 @@ describe('Priority', function () {
     });
 
     describe('worker with minimum priority', function () {
-        beforeEach(function (done) {
+        beforeEach(async function () {
             worker = new Worker([queue], { interval: 1, minPriority: 1 });
             worker.register({ priority: handler });
 
-            helpers.each(jobs, queue.enqueue.bind(queue), done);
-        });
-
-        beforeEach(function (done) {
-            helpers.flushWorker(worker, done);
+            await helpers.each(jobs, queue.enqueue.bind(queue));
+            await helpers.flushWorker(worker);
         });
 
         it('calls handler once for each job with sufficient priority', function () {

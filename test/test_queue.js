@@ -11,7 +11,7 @@ describe('Queue', function () {
 
     afterEach(function () {
         return queue.collection
-          .then(function(c) { return c.remove({})});
+          .then(function(c) { return c.deleteMany({})});
     });
 
     describe('enqueue', function () {
